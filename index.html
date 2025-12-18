@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touch Fastener Challenge - Paiho Edition</title>
+    <title>Touch Fastener Challenge | Paiho Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -27,81 +27,69 @@
             const audioCtx = useRef(null);
             const noiseNode = useRef(null);
             const gainNode = useRef(null);
-            const lastY = useRef(0);
+            const lastX = useRef(0); // 改為記錄 X 軸
 
-            // 初始化 Web Audio API 模擬百和粘扣帶撕開聲
             const initAudio = () => {
                 if (!audioCtx.current) {
                     audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    // 建立白噪音 (模擬撕開聲)
                     const bufferSize = 2 * audioCtx.current.sampleRate;
                     const noiseBuffer = audioCtx.current.createBuffer(1, bufferSize, audioCtx.current.sampleRate);
                     const output = noiseBuffer.getChannelData(0);
                     for (let i = 0; i < bufferSize; i++) {
                         output[i] = Math.random() * 2 - 1;
                     }
-
                     noiseNode.current = audioCtx.current.createBufferSource();
                     noiseNode.current.buffer = noiseBuffer;
                     noiseNode.current.loop = true;
-
                     gainNode.current = audioCtx.current.createGain();
                     gainNode.current.gain.value = 0;
-
                     noiseNode.current.connect(gainNode.current);
                     gainNode.current.connect(audioCtx.current.destination);
                     noiseNode.current.start();
                 }
-                if (audioCtx.current.state === 'suspended') {
-                    audioCtx.current.resume();
-                }
+                if (audioCtx.current.state === 'suspended') audioCtx.current.resume();
             };
 
-            const handleMouseDown = (e) => {
-                if (!gameStarted || isWoke) return;
+            const handleStart = (e) => {
+                if (!gameStarted || isWoke || progress >= 100) return;
                 initAudio();
                 setIsPeeling(true);
-                lastY.current = e.clientY || e.touches[0].clientY;
+                lastX.current = e.clientX || (e.touches ? e.touches[0].clientX : 0);
             };
 
-            const handleMouseMove = (e) => {
+            const handleMove = (e) => {
                 if (!isPeeling || isWoke) return;
-                const currentY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
-                const delta = Math.max(0, lastY.current - currentY); // 向上撕開
+                const currentX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+                const delta = Math.max(0, currentX - lastX.current); // 向右撕開
                 
                 if (delta > 0) {
-                    // 計算速度與噪音
-                    const speed = delta * 5; 
+                    const speed = delta * 3; 
                     setNoiseLevel(speed);
                     
-                    // 更新音量 (模擬物理回饋)
                     if (gainNode.current) {
-                        gainNode.current.gain.setTargetAtTime(Math.min(speed / 100, 0.5), audioCtx.current.currentTime, 0.05);
+                        gainNode.current.gain.setTargetAtTime(Math.min(speed / 120, 0.4), audioCtx.current.currentTime, 0.05);
                     }
 
-                    // 判斷是否吵醒寶寶 (加速度過大)
-                    if (speed > 80) {
+                    if (speed > 70) {
                         setIsWoke(true);
                         setIsPeeling(false);
                         gainNode.current.gain.value = 0;
                     }
 
-                    // 更新進度
                     setProgress(prev => {
-                        const next = prev + delta * 0.2;
+                        const next = prev + delta * 0.3;
                         if (next >= 100) {
                             setIsPeeling(false);
-                            gainNode.current.gain.value = 0;
+                            if (gainNode.current) gainNode.current.gain.value = 0;
                             return 100;
                         }
                         return next;
                     });
                 }
-                lastY.current = currentY;
+                lastX.current = currentX;
             };
 
-            const handleMouseUp = () => {
+            const handleEnd = () => {
                 setIsPeeling(false);
                 setNoiseLevel(0);
                 if (gainNode.current) {
@@ -111,74 +99,81 @@
 
             return (
                 <div 
-                    className="flex flex-col items-center justify-center min-h-screen p-4 select-none"
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onTouchMove={handleMouseMove}
-                    onTouchEnd={handleMouseUp}
+                    className="flex flex-col items-center justify-center min-h-screen p-4 select-none overflow-hidden"
+                    onMouseMove={handleMove}
+                    onMouseUp={handleEnd}
+                    onTouchMove={handleMove}
+                    onTouchEnd={handleEnd}
                 >
-                    <h1 className="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+                    <h1 className="text-3xl font-black mb-2 text-white tracking-tight">
                         PAIHO TOUCH FASTENER
                     </h1>
-                    <p className="text-slate-400 mb-8 italic">"Easy Peel, Quiet Motion"</p>
+                    <p className="text-slate-500 mb-12 text-sm">Interactive Physical Simulation</p>
 
-                    <div className="relative w-64 h-64 mb-12 bg-slate-800 rounded-full flex items-center justify-center border-4 border-slate-700 shadow-2xl">
-                        {/* 寶寶狀態 */}
-                        <div className="text-8xl transition-transform duration-300 transform hover:scale-110">
+                    <div className="relative w-48 h-48 mb-16 bg-slate-800 rounded-full flex items-center justify-center shadow-inner border border-slate-700">
+                        <div className="text-7xl transition-all duration-300">
                             {isWoke ? '😫' : (progress >= 100 ? '🥳' : '😴')}
                         </div>
-                        
-                        {/* 噪音計量表 */}
-                        <div className="absolute inset-0 rounded-full border-t-4 border-red-500 transition-all duration-75"
-                             style={{ opacity: noiseLevel / 100, transform: `rotate(${noiseLevel * 1.8}deg)` }}>
-                        </div>
+                        {/* 噪音警示外圈 */}
+                        <div 
+                            className="absolute inset-0 rounded-full border-4 border-red-500 opacity-0 transition-opacity"
+                            style={{ opacity: noiseLevel / 100, transform: `scale(${1 + noiseLevel/200})` }}
+                        />
                     </div>
 
                     {!gameStarted ? (
                         <button 
                             onClick={() => setGameStarted(true)}
-                            className="bg-emerald-500 hover:bg-emerald-600 px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105"
+                            className="bg-white text-slate-900 px-10 py-3 rounded-full font-bold shadow-lg hover:bg-slate-200 transition-all"
                         >
-                            開始靜音挑戰
+                            START CHALLENGE
                         </button>
                     ) : (
-                        <div className="w-full max-w-xs">
-                            <div className="flex justify-between mb-2 text-sm font-bold">
-                                <span>撕開進度</span>
+                        <div className="w-full max-w-md">
+                            <div className="flex justify-between mb-3 text-xs font-mono text-slate-400 uppercase tracking-widest">
+                                <span>Peeling Progress</span>
                                 <span>{Math.floor(progress)}%</span>
                             </div>
+                            
+                            {/* 橫向進度條控制區 */}
                             <div 
-                                className="h-12 bg-slate-700 rounded-lg relative overflow-hidden cursor-ns-resize border-2 border-slate-600"
-                                onMouseDown={handleMouseDown}
-                                onTouchStart={handleMouseDown}
+                                className="h-16 bg-slate-800 rounded-2xl relative overflow-hidden cursor-ew-resize border border-slate-700 shadow-lg"
+                                onMouseDown={handleStart}
+                                onTouchStart={handleStart}
                             >
+                                {/* 進度填充 */}
                                 <div 
-                                    className="absolute bottom-0 left-0 right-0 bg-blue-500 transition-all duration-100"
-                                    style={{ height: `${progress}%` }}
+                                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-150"
+                                    style={{ width: `${progress}%` }}
                                 />
-                                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold pointer-events-none text-white/50">
-                                    {isPeeling ? '緩慢向上拖拽...' : '按住並向上緩慢撕開'}
+                                {/* 指示文字 */}
+                                <div className="absolute inset-0 flex items-center justify-center text-sm font-medium pointer-events-none">
+                                    {isPeeling ? (
+                                        <span className="animate-pulse text-white">向右緩慢拖拽...</span>
+                                    ) : (
+                                        <span className="text-slate-500">按住並向右橫向撕開</span>
+                                    )}
                                 </div>
                             </div>
                             
                             {isWoke && (
                                 <button 
                                     onClick={() => window.location.reload()}
-                                    className="mt-6 w-full py-2 bg-red-500 rounded-lg font-bold"
+                                    className="mt-8 w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors"
                                 >
                                     寶寶醒了！重新嘗試
                                 </button>
                             )}
                             {progress >= 100 && (
-                                <div className="mt-6 text-center text-emerald-400 font-bold animate-bounce">
-                                    成功！體驗了百和極致靜音技術
+                                <div className="mt-8 text-center text-emerald-400 font-bold text-lg animate-bounce">
+                                    成功完成！
                                 </div>
                             )}
                         </div>
                     )}
 
-                    <div className="mt-12 text-slate-500 text-xs text-center max-w-sm">
-                        此互動模擬由台灣百和 (Taiwan Paiho) 技術啟發，展示高品質 Touch Fastener 在剝離時的細膩音效控管。
+                    <div className="mt-16 text-slate-600 text-[10px] text-center max-w-xs leading-relaxed uppercase tracking-tighter">
+                        This simulation utilizes the physical characteristics of Taiwan Paiho Touch Fasteners.
                     </div>
                 </div>
             );
