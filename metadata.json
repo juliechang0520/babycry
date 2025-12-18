@@ -1,0 +1,5 @@
+{
+  "name": "Velcro Ninja: Don't Wake the Baby",
+  "description": "A high-stakes interactive experience where you must peel a velcro strip with extreme precision. Move too fast, and the noise will wake the baby! Features procedural audio synthesis and real-time physics feedback.",
+  "requestFramePermissions": []
+}
