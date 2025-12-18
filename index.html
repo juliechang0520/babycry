@@ -20,5 +20,24 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen overflow-hidden">
     <div id="root"></div>
+    <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+
+    // 這裡貼上你從 Google AI Studio 複製的 React 組件代碼
+    function App() {
+        // ... 你的遊戲邏輯 ...
+        // 記得將代碼中的 "Velcro" 改為 "Touch Fastener"
+        return (
+            <div className="p-4">
+                <h1>Touch Fastener Ninja</h1>
+                {/* 遊戲內容 */}
+            </div>
+        );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
 </body>
 </html>
